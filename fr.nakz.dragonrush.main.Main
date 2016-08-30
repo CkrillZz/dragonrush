@@ -1,0 +1,133 @@
+package fr.nakz.dragonrush.main;
+
+import fr.nakz.dragonrush.utils.Eggs;
+import fr.nakz.dragonrush.unclassified.ForceStartCommand;
+import fr.nakz.dragonrush.unclassified.Listener;
+import fr.nakz.dragonrush.unclassified.SessionManager;
+import fr.nakz.dragonrush.unclassified.Team;
+import fr.nakz.dragonrush.utils.AdrenalineBoost;
+import fr.nakz.dragonrush.utils.HealthBoost;
+import fr.nakz.dragonrush.commands.SetEggsCommand;
+import fr.nakz.dragonrush.commands.SetSpawnCommand;
+import fr.nakz.dragonrush.commands.SetaCommand;
+import fr.nakz.dragonrush.commands.SetrCommand;
+import fr.nakz.dragonrush.utils.Util;
+import net.md_5.bungee.api.ChatColor;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public class Main extends JavaPlugin {
+    public CommandExecutor setSpawnCommand;
+    public CommandExecutor setEggsCommand;
+    public CommandExecutor setr;
+    public CommandExecutor seta;
+    public CommandExecutor forceStart;
+    public Team blueTeam;
+    public Team redTeam;
+    public Eggs blueEggs;
+    public Eggs redEggs;
+    public HealthBoost locationHealthBoost;
+    public AdrenalineBoost locationAdrenalineBoost;
+    public HashMap<Location, ArmorStand> tabArmorStandHealth = new HashMap();
+    public HashMap<Location, ArmorStand> tabArmorStandAdrenaline = new HashMap();
+    public SessionManager session;
+
+    public Main() {
+    }
+
+    public void onEnable() {
+        this.saveDefaultConfig();
+        this.registerCommand();
+        Team.m = this;
+        new Util(this);
+        this.locationHealthBoost = new HealthBoost(this);
+        this.locationAdrenalineBoost = new AdrenalineBoost(this);
+        this.locationAdrenalineBoost.loadLocation();
+        this.locationHealthBoost.loadLocation();
+        this.spawnArmorStandAdrenaline();
+        this.spawnArmorStandHealth();
+        this.blueTeam = new Team("blue");
+        this.redTeam = new Team("red");
+        this.blueEggs = new Eggs(this.blueTeam, Util.getEggsBlue());
+        this.redEggs = new Eggs(this.redTeam, Util.getEggsRed());
+        PluginManager pm = this.getServer().getPluginManager();
+        pm.registerEvents(new Listener(this), this);
+        this.session = new SessionManager(this);
+    }
+
+    public void onDisable() {
+    }
+
+    public void registerCommand() {
+        this.setSpawnCommand = new SetSpawnCommand(this);
+        this.getCommand("setspawn").setExecutor(this.setSpawnCommand);
+        this.setEggsCommand = new SetEggsCommand(this);
+        this.getCommand("seteggs").setExecutor(this.setEggsCommand);
+        this.setr = new SetrCommand(this);
+        this.getCommand("setr").setExecutor(this.setr);
+        this.seta = new SetaCommand(this);
+        this.getCommand("seta").setExecutor(this.seta);
+        this.forceStart = new ForceStartCommand(this);
+        this.getCommand("forcestart").setExecutor(this.forceStart);
+    }
+
+    public void reloadGame() {
+        this.session = null;
+        this.session = new SessionManager(this);
+        this.blueTeam = null;
+        this.redTeam = null;
+        this.blueEggs = null;
+        this.redEggs = null;
+        this.blueTeam = new Team("blue");
+        this.redTeam = new Team("red");
+        this.blueEggs = new Eggs(this.blueTeam, Util.getEggsBlue());
+        this.redEggs = new Eggs(this.redTeam, Util.getEggsRed());
+    }
+    
+    
+    public void stopServer() {
+    	this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+    		public void run() {
+                for(Player pa : Bukkit.getOnlinePlayers()) {
+        			pa.kickPlayer(ChatColor.RED + "End of the game");
+                }
+    		}
+    	}, 20 * 30);
+    }
+
+    public void spawnArmorStandHealth() {
+        Iterator var2 = this.locationHealthBoost.tabLocation.iterator();
+
+        while(var2.hasNext()) {
+            Location l = (Location)var2.next();
+            ArmorStand as = (ArmorStand)Bukkit.getServer().getWorld(this.getConfig().getString("gameWorld")).spawn(l, ArmorStand.class);
+            this.tabArmorStandHealth.put(l, as);
+            as.setVisible(false);
+            as.setCustomName("§l§aHealth §l§2Boost");
+            as.setCustomNameVisible(false);
+        }
+
+    }
+
+    public void spawnArmorStandAdrenaline() {
+        Iterator var2 = this.locationAdrenalineBoost.tabLocation.iterator();
+
+        while(var2.hasNext()) {
+            Location l = (Location)var2.next();
+            ArmorStand as = (ArmorStand)Bukkit.getServer().getWorld(this.getConfig().getString("gameWorld")).spawn(l, ArmorStand.class);
+            this.tabArmorStandAdrenaline.put(l, as);
+            as.setVisible(false);
+            as.setCustomName("§l§cAdrenaline");
+            as.setCustomNameVisible(false);
+        }
+
+    }
+}
