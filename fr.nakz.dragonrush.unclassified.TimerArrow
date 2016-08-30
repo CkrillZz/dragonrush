@@ -1,0 +1,25 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class TimerArrow {
+    Main main;
+
+    public TimerArrow(Main m) {
+        this.main = m;
+        (new BukkitRunnable() {
+            public void run() {
+                if(TimerArrow.this.main.session == null || TimerArrow.this.main.session.isEnd) {
+                    this.cancel();
+                }
+
+                if(TimerArrow.this.main.session != null && TimerArrow.this.main.session.isStart) {
+                    TimerArrow.this.main.blueTeam.giveArrow();
+                    TimerArrow.this.main.redTeam.giveArrow();
+                }
+
+            }
+        }).runTaskTimer(this.main, 0L, 60L);
+    }
+}
