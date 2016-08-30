@@ -1,0 +1,30 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+public class ForceStartCommand implements CommandExecutor {
+    Main main;
+
+    public ForceStartCommand(Main m) {
+        this.main = m;
+    }
+
+    public boolean onCommand(CommandSender sender, Command arg1, String arg2, String[] args) {
+        if(!(sender instanceof Player)) {
+            return false;
+        } else {
+            Player p = (Player)sender;
+            if(p.isOp()) {
+                this.main.session.secondes = 10;
+                this.main.session.forceStart = true;
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+}
