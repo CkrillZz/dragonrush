@@ -1,0 +1,93 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import fr.nakz.dragonrush.utils.Util;
+import java.util.ArrayList;
+import java.util.Iterator;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+
+public class Team {
+    public String color;
+    public ArrayList<Player> listPlayer;
+    public boolean finalKill;
+    public int nbKills;
+    public static Main m;
+
+    public Team(String color) {
+        this.color = color;
+        this.listPlayer = new ArrayList();
+        this.finalKill = false;
+        this.nbKills = 0;
+    }
+
+    public String getColor() {
+        return this.color;
+    }
+
+    public void removePlayer(Player p) {
+        this.listPlayer.remove(p);
+        if(m.session.isStart) {
+            p.getInventory().clear();
+            ItemStack air = new ItemStack(Material.AIR);
+            p.getInventory().setArmorContents(new ItemStack[]{air, air, air, air});
+            p.teleport(p.getWorld().getSpawnLocation());
+        }
+
+    }
+
+    public void addPlayer(Player p) {
+        this.listPlayer.add(p);
+    }
+
+    public boolean isInTeam(Player p) {
+        return this.listPlayer.contains(p);
+    }
+
+    public void giveArrow() {
+        Iterator var2 = this.listPlayer.iterator();
+
+        while(var2.hasNext()) {
+            Player p = (Player)var2.next();
+            PlayerInventory inv = p.getInventory();
+            if(!inv.contains(Material.ARROW)) {
+                inv.setItem(8, new ItemStack(Material.ARROW));
+            } else if(inv.getItem(8).getAmount() < 5) {
+                inv.addItem(new ItemStack[]{new ItemStack(Material.ARROW)});
+            }
+        }
+
+    }
+
+    public void tpPlayer() {
+        Iterator var2 = this.listPlayer.iterator();
+
+        while(var2.hasNext()) {
+            Player p = (Player)var2.next();
+            if(this.color.equals("blue")) {
+                p.teleport(Util.getSpawnBlue());
+            } else {
+                p.teleport(Util.getSpawnRed());
+            }
+        }
+
+    }
+
+    public void setFinalKill() {
+        this.finalKill = true;
+    }
+
+    public void setNbKill() {
+        ++this.nbKills;
+    }
+
+    public int getNbKill() {
+        return this.nbKills;
+    }
+
+    public boolean getFinalKill() {
+        return this.finalKill;
+    }
+}
