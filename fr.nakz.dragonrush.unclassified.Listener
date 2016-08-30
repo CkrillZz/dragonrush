@@ -1,0 +1,327 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import fr.nakz.dragonrush.timers.TimerBoost;
+import fr.nakz.dragonrush.unclassified.TimerSwordBow;
+import fr.nakz.dragonrush.utils.Util;
+import net.minecraft.server.v1_8_R3.PacketPlayInClientCommand;
+import net.minecraft.server.v1_8_R3.PacketPlayInClientCommand.EnumClientCommand;
+import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerChatEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class Listener implements org.bukkit.event.Listener {
+    Main main;
+
+    public Listener(Main m) {
+        this.main = m;
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e) {
+        Player p = e.getPlayer();
+        p.teleport(Bukkit.getWorld(this.main.getConfig().getString("gameWorld")).getSpawnLocation());
+        p.setGameMode(GameMode.ADVENTURE);
+        if(!this.main.session.isStart && Util.getNbJoueur() < 20) {
+            p.getInventory().clear();
+            ItemStack redWool = new ItemStack(Material.WOOL, 1, DyeColor.RED.getData());
+            ItemMeta meta = redWool.getItemMeta();
+            meta.setDisplayName("§cRed Team");
+            redWool.setItemMeta(meta);
+            ItemStack blueWool = new ItemStack(Material.WOOL, 1, DyeColor.BLUE.getData());
+            ItemMeta meta1 = blueWool.getItemMeta();
+            meta1.setDisplayName("§9Blue Team");
+            blueWool.setItemMeta(meta1);
+            p.getInventory().setItem(0, redWool);
+            p.getInventory().setItem(1, blueWool);
+            e.setJoinMessage("§3" + p.getName() + " §6joined §6the §6game §6( §c" + this.main.getServer().getOnlinePlayers().size() + " §6/ §c20 §6)");
+        } else {
+            p.setGameMode(GameMode.SPECTATOR);
+            p.sendMessage("§o§7Spectator mode");
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerDisconnect(PlayerQuitEvent e) {
+        if(!this.main.session.isStart) {
+            if(this.main.redTeam.isInTeam(e.getPlayer())) {
+                this.main.redTeam.removePlayer(e.getPlayer());
+                e.setQuitMessage("§3" + e.getPlayer().getName() + " §6quit §6the §6game §6( §c" + (Bukkit.getOnlinePlayers().size() - 1) + " §6/ §c12 §6)");
+            } else if(this.main.blueTeam.isInTeam(e.getPlayer())) {
+                this.main.blueTeam.removePlayer(e.getPlayer());
+                e.setQuitMessage("§3" + e.getPlayer().getName() + " §6quit §6the §6game §6( §c" + (Bukkit.getOnlinePlayers().size() - 1) + " §6/ §c12 §6)");
+            } else {
+                e.setQuitMessage("");
+            }
+        } else if(this.main.session.isStart) {
+            if(this.main.redTeam.isInTeam(e.getPlayer())) {
+                this.main.redTeam.removePlayer(e.getPlayer());
+                e.setQuitMessage("§3" + e.getPlayer().getName() + " §6quit §6the §6game §6( §c" + Util.getNbJoueur() + " §6/ §c12 §6)");
+            } else if(this.main.blueTeam.isInTeam(e.getPlayer())) {
+                this.main.blueTeam.removePlayer(e.getPlayer());
+                e.setQuitMessage("§3" + e.getPlayer().getName() + " §6quit §6the §6game §6( §c" + Util.getNbJoueur() + " §6/ §c12 §6)");
+            } else {
+                e.setQuitMessage("");
+            }
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent e) {
+        if(!this.main.session.isStart && e.getAction() != null && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && e.getPlayer() != null && e.getPlayer().getInventory() != null && e.getPlayer().getInventory().getItemInHand() != null && e.getPlayer().getInventory().getItemInHand().getItemMeta() != null && e.getPlayer().getInventory().getItemInHand().getItemMeta().getDisplayName() != null && e.getPlayer().getInventory().getItemInHand().getType().equals(Material.WOOL)) {
+            if(e.getPlayer().getInventory().getItemInHand().getItemMeta().getDisplayName().contains("§cRed Team")) {
+                if(this.main.redTeam.listPlayer.size() < 10) {
+                    if(!this.main.redTeam.isInTeam(e.getPlayer())) {
+                        e.getPlayer().sendMessage("§aYou joined §cRed Team §a!");
+                        if(this.main.blueTeam.isInTeam(e.getPlayer())) {
+                            this.main.blueTeam.removePlayer(e.getPlayer());
+                        }
+
+                        this.main.redTeam.addPlayer(e.getPlayer());
+                    } else {
+                        e.getPlayer().sendMessage("§cYou are already in the Red Team !");
+                    }
+                } else {
+                    e.getPlayer().sendMessage("§cRed Team is full !");
+                }
+            } else if(e.getPlayer().getInventory().getItemInHand().getItemMeta().getDisplayName().contains("§9Blue Team")) {
+                if(this.main.blueTeam.listPlayer.size() < 10) {
+                    if(!this.main.blueTeam.isInTeam(e.getPlayer())) {
+                        e.getPlayer().sendMessage("§aYou joined §9Blue Team §a!");
+                        if(this.main.redTeam.isInTeam(e.getPlayer())) {
+                            this.main.redTeam.removePlayer(e.getPlayer());
+                        }
+
+                        this.main.blueTeam.addPlayer(e.getPlayer());
+                    } else {
+                        e.getPlayer().sendMessage("§cYou are already in the Blue Team !");
+                    }
+                } else {
+                    e.getPlayer().sendMessage("§cBlue Team is full !");
+                }
+            }
+        }
+
+        if(this.main.session.isStart && !this.main.session.isEnd && e.getClickedBlock() != null && e.getClickedBlock().getType().equals(Material.DRAGON_EGG)) {
+            if(e.getClickedBlock().getLocation().equals(Util.getEggsBlue()) && this.main.redTeam.isInTeam(e.getPlayer()) && !this.main.blueEggs.isBreak()) {
+                this.main.blueEggs.updateVie();
+                if(this.main.blueEggs.getVie() == 0 && !this.main.blueTeam.finalKill) {
+                    Bukkit.broadcastMessage("§l§c" + e.getPlayer().getName() + " §3has §3slaugthered §l§9Dragon Eggs§3. §l§9Team Blue  §3can no longer respawn");
+                    this.main.blueTeam.setFinalKill();
+                    Util.getEggsBlue().getBlock().setType(Material.AIR);
+                }
+            }
+
+            if(e.getClickedBlock().getLocation().equals(Util.getEggsRed()) && this.main.blueTeam.isInTeam(e.getPlayer()) && !this.main.redEggs.isBreak()) {
+                this.main.redEggs.updateVie();
+                if(this.main.redEggs.getVie() == 0 && !this.main.redTeam.finalKill) {
+                    Bukkit.broadcastMessage("§l§c" + e.getPlayer().getName() + " §3has §3slaugthered §l§cDragon Eggs§3. §l§cTeam Red §3can no longer respawn");
+                    this.main.redTeam.setFinalKill();
+                    Util.getEggsRed().getBlock().setType(Material.AIR);
+                }
+            }
+
+            e.setCancelled(true);
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent e) {
+        Player killer = e.getEntity().getKiller();
+        Player death = e.getEntity();
+        e.setKeepInventory(true);
+        Bukkit.broadcastMessage(" "+this.main.session.isStart+this.main.session.isEnd+" ");
+        if(this.main.session.isStart && !this.main.session.isEnd && killer != null) {
+            killer.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 60, 1));
+            killer.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
+            Util.setItemEnchant(killer);
+            new TimerSwordBow(killer, this.main);
+            if(this.main.blueTeam.isInTeam(killer) && this.main.redTeam.isInTeam(death) && !this.main.redTeam.finalKill) {
+                e.setDeathMessage("§9" + killer.getName() + " §fkill §c" + death.getName());
+                this.main.blueTeam.setNbKill();
+            } else if(this.main.blueTeam.isInTeam(killer) && this.main.redTeam.isInTeam(death) && this.main.redTeam.finalKill) {
+                e.setDeathMessage("§9" + killer.getName() + " §l§fFinal kill §c" + death.getName());
+                this.main.redTeam.removePlayer(death);
+                death.teleport(Util.getRespawn());
+                this.main.blueTeam.setNbKill();
+            }
+
+            if(this.main.redTeam.isInTeam(killer) && this.main.blueTeam.isInTeam(death) && !this.main.blueTeam.finalKill) {
+                e.setDeathMessage("§c" + killer.getName() + " §fkill §9" + death.getName());
+                this.main.redTeam.setNbKill();
+            } else if(this.main.redTeam.isInTeam(killer) && this.main.blueTeam.isInTeam(death) && this.main.blueTeam.finalKill) {
+                e.setDeathMessage("§c" + killer.getName() + " §l§fFinal kill §9" + death.getName());
+                this.main.blueTeam.removePlayer(death);
+                death.teleport(Util.getRespawn());
+                this.main.redTeam.setNbKill();
+            }
+        }
+
+        ((CraftPlayer)e.getEntity()).getHandle().playerConnection.a(new PacketPlayInClientCommand(EnumClientCommand.PERFORM_RESPAWN));
+    }
+
+    @EventHandler
+    public void onPlayerDamage(EntityDamageByEntityEvent e) {
+        if(this.main.session.isStart && !this.main.session.isEnd && e.getDamager().getType().equals(EntityType.PLAYER) && e.getEntity().getType().equals(EntityType.PLAYER)) {
+            Player p1 = (Player)e.getDamager();
+            Player p2 = (Player)e.getEntity();
+            if(this.main.redTeam.isInTeam(p1) && this.main.redTeam.isInTeam(p2) || this.main.blueTeam.isInTeam(p1) && this.main.blueTeam.isInTeam(p2)) {
+                e.setCancelled(true);
+            }
+        } if(this.main.session.isStart = false) {
+        	e.setCancelled(true);
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerClick(InventoryClickEvent e) {
+        if(!e.getWhoClicked().isOp()) {
+            e.setCancelled(true);
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerPlace(BlockPlaceEvent e) {
+        if(!e.getPlayer().isOp()) {
+            e.setCancelled(true);
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerBreak(BlockBreakEvent e) {
+        if(!e.getPlayer().isOp() || e.getBlock().getType().equals(Material.DRAGON_EGG)) {
+            e.setCancelled(true);
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerPickUp(PlayerPickupItemEvent e) {
+        if(this.main.session.isStart && !this.main.session.isEnd) {
+            Location locPlayer = new Location(e.getPlayer().getWorld(), (double)e.getPlayer().getLocation().getBlockX(), (double)e.getPlayer().getLocation().getBlockY(), (double)e.getPlayer().getLocation().getBlockZ());
+            if(!this.main.locationAdrenalineBoost.tabLocation.contains(locPlayer) && !this.main.locationHealthBoost.tabLocation.contains(locPlayer)) {
+                e.setCancelled(true);
+            } else {
+                if(e.getItem().getItemStack().getType().equals(Material.EMERALD)) {
+                    new TimerBoost(locPlayer, new ItemStack(Material.EMERALD), this.main, "§l§aHealth §l§2Boost");
+                    e.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 300, 1));
+                    e.setCancelled(true);
+                    e.getItem().remove();
+                    e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation()).setType(Material.AIR);
+                    e.getPlayer().getWorld().getBlockAt(e.getPlayer().getLocation().add(0.0D, 1.0D, 0.0D)).setType(Material.AIR);
+                    ((ArmorStand)this.main.tabArmorStandHealth.get(locPlayer)).setCustomNameVisible(false);
+                }
+
+                if(e.getItem().getItemStack().getType().equals(Material.BLAZE_POWDER)) {
+                    new TimerBoost(locPlayer, new ItemStack(Material.BLAZE_POWDER), this.main, "§l§cAdrenaline");
+                    e.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 300, 1));
+                    e.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 300, 0));
+                    e.setCancelled(true);
+                    e.getItem().remove();
+                    ((ArmorStand)this.main.tabArmorStandAdrenaline.get(locPlayer)).setCustomNameVisible(false);
+                }
+            }
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerRespawn(final PlayerRespawnEvent e) {
+        if(this.main.session.isStart && !this.main.session.isEnd) {
+            if(this.main.redTeam.isInTeam(e.getPlayer()) && !this.main.redTeam.finalKill && !this.main.session.isEnd) {
+                (new BukkitRunnable() {
+                    public void run() {
+                        e.getPlayer().teleport(Util.getSpawnRed());
+                    }
+                }).runTaskLater(this.main, 10L);
+                Util.setStuff(e.getPlayer());
+            } else if(this.main.redTeam.isInTeam(e.getPlayer()) && this.main.redTeam.finalKill) {
+                (new BukkitRunnable() {
+                    public void run() {
+                        e.getPlayer().teleport(Util.getRespawn());
+                    }
+                }).runTaskLater(this.main, 10L);
+            }
+
+            if(this.main.blueTeam.isInTeam(e.getPlayer()) && !this.main.blueTeam.finalKill && !this.main.session.isEnd) {
+                (new BukkitRunnable() {
+                    public void run() {
+                        e.getPlayer().teleport(Util.getSpawnBlue());
+                    }
+                }).runTaskLater(this.main, 10L);
+                Util.setStuff(e.getPlayer());
+            } else if(this.main.blueTeam.isInTeam(e.getPlayer()) && this.main.blueTeam.finalKill) {
+                (new BukkitRunnable() {
+                    public void run() {
+                        e.getPlayer().teleport(Util.getRespawn());
+                    }
+                }).runTaskLater(this.main, 10L);
+            }
+        }
+
+    }
+
+    @EventHandler
+    public void onPlayerHungry(FoodLevelChangeEvent e) {
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent e) {
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onExplosion(EntityExplodeEvent e) {
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerChat(PlayerChatEvent e) {
+    	e.setCancelled(true);
+        Player p = e.getPlayer();
+        if(this.main.blueTeam.isInTeam(p)) {
+            Bukkit.broadcastMessage("§b" + p.getName() + "§f»" + e.getMessage());
+        } else if(this.main.redTeam.isInTeam(p)) {
+            Bukkit.broadcastMessage("§c" + p.getName() + "§f» " + e.getMessage());
+        } else {
+            Bukkit.broadcastMessage("§f" + p.getName() + "§f» " + e.getMessage());
+        }
+
+    }
+}
