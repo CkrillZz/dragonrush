@@ -1,0 +1,114 @@
+package fr.nakz.dragonrush.utils;
+
+import fr.nakz.dragonrush.main.Main;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+
+public class Util {
+    static Main main;
+
+    public Util(Main m) {
+        main = m;
+    }
+
+    public static Location getSpawnBlue() {
+        int posX = main.getConfig().getInt("team.blue.spawn.posX");
+        int posY = main.getConfig().getInt("team.blue.spawn.posY");
+        int posZ = main.getConfig().getInt("team.blue.spawn.posZ");
+        World world = Bukkit.getWorld(main.getConfig().getString("gameWorld"));
+        return new Location(world, (double)posX, (double)posY, (double)posZ);
+    }
+
+    public static Location getSpawnRed() {
+        int posX = main.getConfig().getInt("team.red.spawn.posX");
+        int posY = main.getConfig().getInt("team.red.spawn.posY");
+        int posZ = main.getConfig().getInt("team.red.spawn.posZ");
+        World world = Bukkit.getWorld(main.getConfig().getString("gameWorld"));
+        return new Location(world, (double)posX, (double)posY, (double)posZ);
+    }
+
+    public static Location getEggsRed() {
+        int posX = main.getConfig().getInt("team.red.eggs.posX");
+        int posY = main.getConfig().getInt("team.red.eggs.posY");
+        int posZ = main.getConfig().getInt("team.red.eggs.posZ");
+        World world = Bukkit.getWorld(main.getConfig().getString("gameWorld"));
+        return new Location(world, (double)posX, (double)posY, (double)posZ);
+    }
+
+    public static Location getEggsBlue() {
+        int posX = main.getConfig().getInt("team.blue.eggs.posX");
+        int posY = main.getConfig().getInt("team.blue.eggs.posY");
+        int posZ = main.getConfig().getInt("team.blue.eggs.posZ");
+        World world = Bukkit.getWorld(main.getConfig().getString("gameWorld"));
+        return new Location(world, (double)posX, (double)posY, (double)posZ);
+    }
+
+    public static Location getRespawn() {
+        return Bukkit.getWorld(main.getConfig().getString("gameWorld")).getSpawnLocation();
+    }
+
+    public static int getNbJoueur() {
+        return main.blueTeam.listPlayer.size() + main.redTeam.listPlayer.size();
+    }
+
+    public static void setStuff(Player p) {
+        ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
+        ItemStack chestplate = new ItemStack(Material.IRON_CHESTPLATE);
+        ItemStack leggings = new ItemStack(Material.LEATHER_LEGGINGS);
+        ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+        helmet.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 2);
+        chestplate.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 2);
+        leggings.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 2);
+        boots.addEnchantment(Enchantment.PROTECTION_ENVIRONMENTAL, 2);
+        LeatherArmorMeta helmetMeta = (LeatherArmorMeta)helmet.getItemMeta();
+        LeatherArmorMeta leggingsMeta = (LeatherArmorMeta)leggings.getItemMeta();
+        LeatherArmorMeta bootsMeta = (LeatherArmorMeta)boots.getItemMeta();
+        if(main.redTeam.isInTeam(p)) {
+            helmetMeta.setColor(Color.RED);
+            helmet.setItemMeta(helmetMeta);
+            leggingsMeta.setColor(Color.RED);
+            leggings.setItemMeta(leggingsMeta);
+            bootsMeta.setColor(Color.RED);
+            boots.setItemMeta(bootsMeta);
+        } else if(main.blueTeam.isInTeam(p)) {
+            helmetMeta.setColor(Color.BLUE);
+            helmet.setItemMeta(helmetMeta);
+            leggingsMeta.setColor(Color.BLUE);
+            leggings.setItemMeta(leggingsMeta);
+            bootsMeta.setColor(Color.BLUE);
+            boots.setItemMeta(bootsMeta);
+        }
+
+        ItemStack[] tabArmure = new ItemStack[]{boots, leggings, chestplate, helmet};
+        p.getEquipment().setArmorContents(tabArmure);
+        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        ItemStack bow = new ItemStack(Material.BOW);
+        ItemStack arrow = new ItemStack(Material.ARROW, 3);
+        p.getInventory().setItem(0, sword);
+        p.getInventory().setItem(1, bow);
+        p.getInventory().setItem(8, arrow);
+    }
+
+    public static void setItemEnchant(Player p) {
+        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        sword.addEnchantment(Enchantment.FIRE_ASPECT, 1);
+        ItemMeta meta1 = sword.getItemMeta();
+        meta1.setDisplayName("§l§6Dragon\'s Sword");
+        sword.setItemMeta(meta1);
+        p.getInventory().setItem(0, sword);
+        ItemStack bow = new ItemStack(Material.BOW);
+        bow.addEnchantment(Enchantment.ARROW_FIRE, 1);
+        ItemMeta meta2 = bow.getItemMeta();
+        meta2.setDisplayName("§l§6Dragon\'s Bow");
+        bow.setItemMeta(meta2);
+        p.getInventory().setItem(1, bow);
+    }
+}
