@@ -1,0 +1,35 @@
+package fr.nakz.dragonrush.timers;
+
+import fr.nakz.dragonrush.main.Main;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class TimerBoost {
+    Main main;
+    Location location;
+    ItemStack item;
+    String title;
+
+    public TimerBoost(Location l, ItemStack i, Main m, String t) {
+        this.main = m;
+        this.location = l;
+        this.item = i;
+        this.title = t;
+        (new BukkitRunnable() {
+            public void run() {
+                if(TimerBoost.this.main.tabArmorStandAdrenaline.get(TimerBoost.this.location) != null) {
+                    ((ArmorStand)TimerBoost.this.main.tabArmorStandAdrenaline.get(TimerBoost.this.location)).setCustomNameVisible(true);
+                }
+
+                if(TimerBoost.this.main.tabArmorStandHealth.get(TimerBoost.this.location) != null) {
+                    ((ArmorStand)TimerBoost.this.main.tabArmorStandHealth.get(TimerBoost.this.location)).setCustomNameVisible(true);
+                }
+
+                Bukkit.getWorld(TimerBoost.this.main.getConfig().getString("gameWorld")).dropItemNaturally(TimerBoost.this.location, TimerBoost.this.item);
+            }
+        }).runTaskLater(this.main, 300L);
+    }
+}
