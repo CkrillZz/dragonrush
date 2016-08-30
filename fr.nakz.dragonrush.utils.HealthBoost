@@ -1,0 +1,44 @@
+package fr.nakz.dragonrush.utils;
+
+import fr.nakz.dragonrush.main.Main;
+import java.util.ArrayList;
+import java.util.Iterator;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.inventory.ItemStack;
+
+public class HealthBoost {
+    public ArrayList<Location> tabLocation = new ArrayList();
+    Main main;
+
+    public HealthBoost(Main m) {
+        this.main = m;
+    }
+
+    public void loadLocation() {
+        Iterator var2 = this.main.getConfig().getConfigurationSection("healthBoost").getKeys(false).iterator();
+
+        while(var2.hasNext()) {
+            String name = (String)var2.next();
+            int posX = this.main.getConfig().getInt("healthBoost." + name + ".location.posX");
+            int posY = this.main.getConfig().getInt("healthBoost." + name + ".location.posY");
+            int posZ = this.main.getConfig().getInt("healthBoost." + name + ".location.posZ");
+            World world = Bukkit.getWorld(this.main.getConfig().getString("gameWorld"));
+            this.tabLocation.add(new Location(world, (double)posX, (double)posY, (double)posZ));
+        }
+
+    }
+
+    public void setItemAll() {
+        ItemStack item = new ItemStack(Material.EMERALD);
+        Iterator var3 = this.tabLocation.iterator();
+
+        while(var3.hasNext()) {
+            Location l = (Location)var3.next();
+            Bukkit.getWorld(this.main.getConfig().getString("gameWorld")).dropItem(l, item);
+        }
+
+    }
+}
