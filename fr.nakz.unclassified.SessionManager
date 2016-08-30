@@ -1,0 +1,313 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import fr.nakz.dragonrush.unclassified.TimerArrow;
+import fr.nakz.dragonrush.utils.Util;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Iterator;
+import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+
+public class SessionManager {
+    Main main;
+    int secondes;
+    Scoreboard sc;
+    Objective titleSc;
+    Scoreboard scBlue;
+    Objective titleScBlue;
+    Scoreboard scRed;
+    Objective titleScRed;
+    private NumberFormat clockFormat;
+    boolean isWaiting;
+    boolean isStart;
+    boolean isEnd;
+    boolean forceStart;
+
+    public SessionManager(Main m) {
+        this.main = m;
+        this.secondes = -1;
+        this.isStart = false;
+        this.isEnd = false;
+        this.forceStart = false;
+        this.clockFormat = new DecimalFormat("00");
+        this.sc = m.getServer().getScoreboardManager().getNewScoreboard();
+        this.scRed = m.getServer().getScoreboardManager().getNewScoreboard();
+        this.scBlue = m.getServer().getScoreboardManager().getNewScoreboard();
+        (new BukkitRunnable() {
+            public void run() {
+                Player p;
+                Iterator var2;
+                if(!SessionManager.this.isStart && !SessionManager.this.isEnd) {
+                    SessionManager.this.scUpdate();
+                    var2 = Bukkit.getServer().getOnlinePlayers().iterator();
+
+                    while(var2.hasNext()) {
+                        p = (Player)var2.next();
+                        p.setScoreboard(SessionManager.this.sc);
+                    }
+
+                    if(Util.getNbJoueur() >= 10 && (SessionManager.this.secondes < 0 || SessionManager.this.secondes > 60)) {
+                        SessionManager.this.secondes = 120;
+                    }
+
+                    if(Util.getNbJoueur() >= 15 && (SessionManager.this.secondes < 0 || SessionManager.this.secondes > 30)) {
+                        SessionManager.this.secondes = 60;
+                    }
+
+                    if(Util.getNbJoueur() >= 20 && (SessionManager.this.secondes < 0 || SessionManager.this.secondes > 10)) {
+                        SessionManager.this.secondes = 10;
+                    }
+
+                    if(Util.getNbJoueur() < 20 && SessionManager.this.secondes != -1 && SessionManager.this.secondes != 0 && !SessionManager.this.forceStart) {
+                        SessionManager.this.secondes = -1;
+                        Bukkit.broadcastMessage("§cStart cancelled, waiting for more players (" + Util.getNbJoueur() + "/20)");
+                    }
+
+                    if(SessionManager.this.secondes > 0 || SessionManager.this.forceStart) {
+                        Bukkit.broadcastMessage("§aStarting in " + SessionManager.this.secondes + " §aseconds");
+                        --SessionManager.this.secondes;
+                    }
+
+                    if(SessionManager.this.secondes == 0) {
+                        var2 = Bukkit.getServer().getOnlinePlayers().iterator();
+
+                        label124:
+                        while(true) {
+                            while(true) {
+                                while(var2.hasNext()) {
+                                    p = (Player)var2.next();
+                                    if(!SessionManager.this.main.blueTeam.isInTeam(p) && !SessionManager.this.main.redTeam.isInTeam(p)) {
+                                        if(SessionManager.this.main.blueTeam.listPlayer.size() < 6 && SessionManager.this.main.blueTeam.listPlayer.size() < SessionManager.this.main.redTeam.listPlayer.size()) {
+                                            SessionManager.this.main.blueTeam.addPlayer(p);
+                                            p.getInventory().clear();
+                                            Util.setStuff(p);
+                                            p.setFoodLevel(20);
+                                        } else if(SessionManager.this.main.redTeam.listPlayer.size() < 6) {
+                                            SessionManager.this.main.redTeam.addPlayer(p);
+                                            p.getInventory().clear();
+                                            Util.setStuff(p);
+                                            p.setFoodLevel(20);
+                                        } else {
+                                            p.getInventory().clear();
+                                            p.setGameMode(GameMode.SPECTATOR);
+                                        }
+                                    } else {
+                                        p.getInventory().clear();
+                                        Util.setStuff(p);
+                                        p.setFoodLevel(20);
+                                    }
+                                }
+                                
+                                Bukkit.broadcastMessage("§aGood luck !");
+                                SessionManager.this.isStart = true;
+                                var2 = SessionManager.this.main.tabArmorStandAdrenaline.values().iterator();
+                                ArmorStand var3;
+                                while(var2.hasNext()) {
+                                    var3 = (ArmorStand)var2.next();
+                                    var3.setCustomNameVisible(true);
+                                }
+
+                                var2 = SessionManager.this.main.tabArmorStandHealth.values().iterator();
+
+                                while(var2.hasNext()) {
+                                    var3 = (ArmorStand)var2.next();
+                                    var3.setCustomNameVisible(true);
+                                }
+
+                                SessionManager.this.main.blueTeam.tpPlayer();
+                                SessionManager.this.main.redTeam.tpPlayer();
+                                SessionManager.this.main.locationAdrenalineBoost.setItemAll();
+                                SessionManager.this.main.locationHealthBoost.setItemAll();
+                                Util.getEggsBlue().getBlock().setType(Material.DRAGON_EGG);
+                                Util.getEggsRed().getBlock().setType(Material.DRAGON_EGG);
+                                new TimerArrow(SessionManager.this.main);
+                                SessionManager.this.titleSc.unregister();
+                                break label124;
+                            }
+                        }
+                    }
+                }
+
+                if(SessionManager.this.isStart && !SessionManager.this.isEnd) {
+                    SessionManager.this.scUpdateBlue();
+                    SessionManager.this.scUpdateRed();
+                    var2 = Bukkit.getServer().getOnlinePlayers().iterator();
+
+                    while(var2.hasNext()) {
+                        p = (Player)var2.next();
+                        p.setScoreboard(SessionManager.this.sc);
+                    }
+
+                    var2 = Bukkit.getServer().getOnlinePlayers().iterator();
+
+                    while(var2.hasNext()) {
+                        p = (Player)var2.next();
+                        if(SessionManager.this.main.blueTeam.isInTeam(p)) {
+                            p.setScoreboard(SessionManager.this.scBlue);
+                        } else if(SessionManager.this.main.redTeam.isInTeam(p)) {
+                            p.setScoreboard(SessionManager.this.scRed);
+                        }
+                    }
+
+                    if(SessionManager.this.main.redTeam.listPlayer.size() == 0 || SessionManager.this.main.blueTeam.listPlayer.size() == 0) {
+                        if(SessionManager.this.main.redTeam.listPlayer.size() == 0) {
+                            Bukkit.broadcastMessage("§9Blue §aTeam wins !");
+                        }
+
+                        if(SessionManager.this.main.blueTeam.listPlayer.size() == 0) {
+                            Bukkit.broadcastMessage("§cRed §aTeam wins !");
+                        }
+
+                        SessionManager.this.main.redTeam.listPlayer.clear();
+                        SessionManager.this.main.blueTeam.listPlayer.clear();
+                        SessionManager.this.isEnd = true;
+                        SessionManager.this.endGame();
+                        this.cancel();
+                    }
+                }
+
+            }
+        }).runTaskTimer(this.main, 0L, 20L);
+    }
+
+    public void endGame() {
+        Iterator var2 = this.main.tabArmorStandAdrenaline.values().iterator();
+
+        ArmorStand p;
+        while(var2.hasNext()) {
+            p = (ArmorStand)var2.next();
+            p.setCustomNameVisible(false);
+        }
+
+        var2 = this.main.tabArmorStandHealth.values().iterator();
+
+        while(var2.hasNext()) {
+            p = (ArmorStand)var2.next();
+            p.setCustomNameVisible(false);
+        }
+
+        var2 = Bukkit.getOnlinePlayers().iterator();
+
+        while(var2.hasNext()) {
+            Player p1 = (Player)var2.next();
+            p1.teleport(Util.getRespawn());
+            ItemStack air = new ItemStack(Material.AIR);
+            p1.getInventory().setArmorContents(new ItemStack[]{air, air, air, air});
+            p1.setGameMode(GameMode.SURVIVAL);
+            p1.getInventory().clear();
+            ItemStack redWool = new ItemStack(Material.WOOL, 1, DyeColor.RED.getData());
+            ItemMeta meta = redWool.getItemMeta();
+            meta.setDisplayName("§cRed Team");
+            redWool.setItemMeta(meta);
+            ItemStack blueWool = new ItemStack(Material.WOOL, 1, DyeColor.BLUE.getData());
+            ItemMeta meta1 = blueWool.getItemMeta();
+            meta1.setDisplayName("§9Blue Team");
+            blueWool.setItemMeta(meta1);
+            p1.getInventory().clear();
+            p1.getInventory().setItem(0, redWool);
+            p1.getInventory().setItem(1, blueWool);
+        }
+
+        this.main.reloadGame();
+        this.main.stopServer();
+    }
+
+       
+
+    public void scUpdate() {
+        if(this.titleSc != null) {
+            this.titleSc.unregister();
+        }
+
+        this.titleSc = this.sc.registerNewObjective("Dragon Rush", "dummy");
+        this.titleSc.setDisplaySlot(DisplaySlot.SIDEBAR);
+        this.titleSc.setDisplayName("§c§lDragon §6§lRush ");
+        this.titleSc.getScore("§7--------------------").setScore(6);
+        this.titleSc.getScore("§ePlayers : §f" + Bukkit.getServer().getOnlinePlayers().size() + "/20").setScore(5);
+        if(this.secondes < 0) {
+            this.titleSc.getScore("§eStarting in : §fWaiting...").setScore(4);
+        } else {
+            this.titleSc.getScore("§eStarting in : §f" + this.clockFormat.format((long)this.secondes) + "§fs").setScore(4);
+        }
+
+        this.titleSc.getScore("§7--------------------").setScore(3);
+        this.titleSc.getScore("§9Blue Team: §f" + this.main.blueTeam.listPlayer.size() + " player(s)").setScore(2);
+        this.titleSc.getScore("§cRed Team: §f" + this.main.redTeam.listPlayer.size() + " player(s)").setScore(1);
+    }
+
+    public void scUpdateBlue() {
+        if(this.titleScBlue != null) {
+            this.titleScBlue.unregister();
+        }
+
+        this.titleScBlue = this.scBlue.registerNewObjective("Dragon Rush", "dummy");
+        this.titleScBlue.setDisplaySlot(DisplaySlot.SIDEBAR);
+        this.titleScBlue.setDisplayName("§c§lDragon §6§lRush ");
+        this.titleScBlue.getScore(" ").setScore(11);
+        this.titleScBlue.getScore("§7-------------------- ").setScore(10);
+        if(this.main.blueEggs.getVie() == 0) {
+            this.titleScBlue.getScore("§eTeam\'s Eggs: §f§nBreak").setScore(9);
+        } else {
+            this.titleScBlue.getScore("§eTeam\'s Eggs: §f" + this.main.blueEggs.getVie() + "%").setScore(9);
+        }
+
+        if(this.main.redEggs.getVie() == 0) {
+            this.titleScBlue.getScore("§cEnemy\'s Eggs: §f§nBreak").setScore(8);
+        } else {
+            this.titleScBlue.getScore("§cEnemy\'s Eggs: §f" + this.main.redEggs.getVie() + "%").setScore(8);
+        }
+
+        this.titleScBlue.getScore("§7--------------------").setScore(7);
+        this.titleScBlue.getScore("§eTeam: ").setScore(6);
+        this.titleScBlue.getScore("§f   " + this.main.blueTeam.listPlayer.size() + " Player(s)").setScore(5);
+        this.titleScBlue.getScore("§f   " + this.main.blueTeam.getNbKill() + " Kill(s)").setScore(4);
+        this.titleScBlue.getScore("§cEnemy Team: ").setScore(3);
+        this.titleScBlue.getScore("§f   " + this.main.redTeam.listPlayer.size() + " Player(s)").setScore(2);
+        this.titleScBlue.getScore("§f   " + this.main.redTeam.getNbKill() + " Kill(s)").setScore(1);
+        this.titleScBlue.getScore("§7--------------------").setScore(0);
+    }
+
+    public void scUpdateRed() {
+        if(this.titleScRed != null) {
+            this.titleScRed.unregister();
+        }
+
+        this.titleScRed = this.scRed.registerNewObjective("Dragon Rush", "dummy");
+        this.titleScRed.setDisplaySlot(DisplaySlot.SIDEBAR);
+        this.titleScRed.setDisplayName("§c§lDragon §6§lRush ");
+        this.titleScRed.getScore(" ").setScore(11);
+        this.titleScRed.getScore("§7-------------------- ").setScore(10);
+        if(this.main.redEggs.getVie() == 0) {
+            this.titleScRed.getScore("§eTeam\'s Eggs: §f§nBreak").setScore(9);
+        } else {
+            this.titleScRed.getScore("§eTeam\'s Eggs: §f" + this.main.redEggs.getVie() + "%").setScore(9);
+        }
+
+        if(this.main.blueEggs.getVie() == 0) {
+            this.titleScRed.getScore("§cEnemy\'s Eggs: §f§nBreak").setScore(8);
+        } else {
+            this.titleScRed.getScore("§cEnemy\'s Eggs: §f" + this.main.blueEggs.getVie() + "%").setScore(8);
+        }
+
+        this.titleScRed.getScore("§7--------------------").setScore(7);
+        this.titleScRed.getScore("§eTeam: ").setScore(6);
+        this.titleScRed.getScore("§f   " + this.main.redTeam.listPlayer.size() + " Player(s)").setScore(5);
+        this.titleScRed.getScore("§f   " + this.main.redTeam.getNbKill() + " Kill(s)").setScore(4);
+        this.titleScRed.getScore("§cEnemy Team: ").setScore(3);
+        this.titleScRed.getScore("§f   " + this.main.blueTeam.listPlayer.size() + " Player(s)").setScore(2);
+        this.titleScRed.getScore("§f   " + this.main.blueTeam.getNbKill() + " Kill(s)").setScore(1);
+        this.titleScRed.getScore("§7--------------------").setScore(0);
+    }
+}
