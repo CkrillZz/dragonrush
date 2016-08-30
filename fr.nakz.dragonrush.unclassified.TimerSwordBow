@@ -1,0 +1,26 @@
+package fr.nakz.dragonrush.unclassified;
+
+import fr.nakz.dragonrush.main.Main;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class TimerSwordBow {
+    Main main;
+    Player player;
+
+    public TimerSwordBow(Player p, Main m) {
+        this.main = m;
+        this.player = p;
+        (new BukkitRunnable() {
+            public void run() {
+                if(TimerSwordBow.this.main.session.isStart && !TimerSwordBow.this.main.session.isEnd) {
+                    TimerSwordBow.this.player.getInventory().setItem(0, new ItemStack(Material.IRON_SWORD));
+                    TimerSwordBow.this.player.getInventory().setItem(1, new ItemStack(Material.BOW));
+                }
+
+            }
+        }).runTaskLater(this.main, 100L);
+    }
+}
